@@ -15,8 +15,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,26 +28,11 @@ jobs:
       - name: Run tests
         run: python -m pytest test_twitter.py -v
 
-      - name: Create tag
+      - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/github-script@v7
-        env:
-          GH_TOKEN: ${{ github.token }}
+        uses: ncipollo/release-action@v1
         with:
-          script: |
-            const now = new Date();
-            const ts = now.getFullYear().toString() +
-              String(now.getMonth() + 1).padStart(2, '0') +
-              String(now.getDate()).padStart(2, '0') + '.' +
-              String(now.getHours()).padStart(2, '0') +
-              String(now.getMinutes()).padStart(2, '0');
-            const tag = `v1.${ts}`;
-
-            const { execSync } = require('child_process');
-            execSync(`git config user.name "github-actions"`);
-            execSync(`git config user.email "github-actions@github.com"`);
-            execSync(`git tag -a ${tag} -m "Release ${tag}"`);
-
-            const repo = process.env.GITHUB_REPOSITORY;
-            const token = process.env.GH_TOKEN;
-            execSync(`git push https://x-access-token:${token}@github.com/${repo}.git ${tag}`);
+          tag: v1.${{ github.run_number }}
+          name: Release v1.${{ github.run_number }}
+          generateReleaseNotes: true
+          makeLatest: true
