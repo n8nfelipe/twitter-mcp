@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --break-system-packages -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest test_twitter.py -v
+
+      - name: Create tag
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const now = new Date();
+            const ts = now.getFullYear().toString() +
+              String(now.getMonth() + 1).padStart(2, '0') +
+              String(now.getDate()).padStart(2, '0') + '.' +
+              String(now.getHours()).padStart(2, '0') +
+              String(now.getMinutes()).padStart(2, '0');
+            const tag = `v1.${ts}`;
+
+            execSync(`git config user.name "github-actions"`);
+            execSync(`git config user.email "github-actions@github.com"`);
+            execSync(`git tag -a ${tag} -m "Release ${tag}"`);
+            execSync(`git push origin ${tag}`);
