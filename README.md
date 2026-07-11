@@ -66,6 +66,44 @@ Add to `~/.config/opencode/opencode.jsonc`:
 }
 ```
 
+## Register with Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "twitter": {
+      "command": "python3",
+      "args": ["/caminho/para/twitter-mcp/server.py"],
+      "env": {
+        "TWITTER_AUTH_TOKEN": "seu_token",
+        "TWITTER_CT0": "seu_ct0"
+      }
+    }
+  }
+}
+```
+
+## Register with Codex (by Cursor)
+
+Create/edit `~/.codex/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "twitter": {
+      "command": "python3",
+      "args": ["/caminho/para/twitter-mcp/server.py"],
+      "env": {
+        "TWITTER_AUTH_TOKEN": "seu_token",
+        "TWITTER_CT0": "seu_ct0"
+      }
+    }
+  }
+}
+```
+
 ## Tools
 
 | Tool | Description | Arguments |
