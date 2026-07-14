@@ -32,6 +32,28 @@ def test_auth_headers():
     assert "Bearer" in headers["Authorization"]
 
 
+def test_auth_cookies_with_user_id():
+    auth = TwitterAuth(auth_token="tok", ct0="ct", user_id="999")
+    assert auth.cookies["user_id"] == "999"
+
+
+def test_auth_headers_without_ct0():
+    auth = TwitterAuth(auth_token="tok")
+    headers = auth.headers
+    assert headers["X-Csrf-Token"] == ""
+    assert "twitter.com" in headers["Origin"]
+
+
+def test_load_auth(monkeypatch):
+    monkeypatch.setenv("TWITTER_AUTH_TOKEN", "tok")
+    monkeypatch.setenv("TWITTER_CT0", "ct")
+    monkeypatch.setenv("TWITTER_USER_ID", "42")
+    auth = load_auth()
+    assert auth.is_valid is True
+    assert auth.user_id == "42"
+    assert auth.cookies["auth_token"] == "tok"
+
+
 @patch("twitter_client.httpx.Client")
 def test_post_tweet(MockClient):
     mock_instance = MagicMock()
@@ -221,3 +243,156 @@ def test_graphql_errors(MockClient):
     import pytest
     with pytest.raises(Exception, match="Something went wrong"):
         client.post_tweet("test")
+
+
+@patch("twitter_client.httpx.Client")
+def test_graphql_403(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    mock_instance.post.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="Forbidden"):
+        client.post_tweet("test")
+
+
+@patch("twitter_client.httpx.Client")
+def test_graphql_unknown_operation(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="Unknown operation"):
+        client._graphql("DoesNotExist", {})
+
+
+@patch("twitter_client.httpx.Client")
+def test_graphql_non_json(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 503
+    mock_response.text = "<html>maintenance</html>"
+    mock_response.json.side_effect = json.JSONDecodeError("err", "", 0)
+    mock_instance.post.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="Non-JSON response"):
+        client._graphql("CreateTweet", {})
+
+
+@patch("twitter_client.httpx.Client")
+def test_get_user_timeline(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = [{"id": 1, "text": "hi"}]
+    mock_instance.get.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    result = client.get_user_timeline("123", count=5)
+    data = json.loads(result)
+    assert isinstance(data, list)
+    _, kwargs = mock_instance.get.call_args
+    assert kwargs["params"]["user_id"] == "123"
+
+
+@patch("twitter_client.httpx.Client")
+def test_get_tweet_detail(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": {"tweetResult": {"result": {"rest_id": "555"}}}}
+    mock_instance.post.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    result = client.get_tweet_detail("555")
+    data = json.loads(result)
+    assert "tweetResult" in data["data"]
+
+
+@patch("twitter_client.httpx.Client")
+def test_follow_user(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"following": True, "id": "123"}
+    mock_instance.post.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    result = client.follow_user("123")
+    data = json.loads(result)
+    assert data["following"] is True
+    call = mock_instance.post.call_args
+    assert "friendships/create.json" in call.args[0]
+
+
+@patch("twitter_client.httpx.Client")
+def test_get_non_200(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.text = "boom"
+    mock_instance.get.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="HTTP 500"):
+        client.get_home_timeline()
+
+
+@patch("twitter_client.httpx.Client")
+def test_get_non_json(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = "not json"
+    mock_response.json.side_effect = json.JSONDecodeError("err", "", 0)
+    mock_instance.get.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="Non-JSON response"):
+        client.get_home_timeline()
+
+
+@patch("twitter_client.httpx.Client")
+def test_post_form_non_200(MockClient):
+    mock_instance = MagicMock()
+    MockClient.return_value = mock_instance
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "bad request"
+    mock_instance.post.return_value = mock_response
+
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    import pytest
+    with pytest.raises(Exception, match="HTTP 400"):
+        client.follow_user("123")
+
+
+def test_close():
+    auth = TwitterAuth(auth_token="tok", ct0="ct")
+    client = TwitterClient(auth)
+    with patch.object(client.client, "close") as mock_close:
+        client.close()
+        mock_close.assert_called_once()

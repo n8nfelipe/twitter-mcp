@@ -6,3 +6,6 @@ __pycache__/
 *.tw_session
 *.session
 posted_news.json
+.coverage
+.coverage.*
+ai_news_cron.log
