@@ -76,6 +76,9 @@ class TwitterClient:
                 "authorization": f"Bearer {BEARER_TOKEN}",
                 "x-csrf-token": auth.ct0,
                 "content-type": "application/json",
+                "x-twitter-auth-type": "OAuth2Session",
+                "x-twitter-active-user": "yes",
+                "x-twitter-client-language": "en",
                 "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "origin": "https://x.com",
                 "referer": "https://x.com/",
@@ -112,6 +115,16 @@ class TwitterClient:
 
     def _get(self, url: str, params: dict | None = None) -> dict:
         resp = self.client.get(url, params=params)
+        if resp.status_code != 200:
+            raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+        try:
+            return resp.json()
+        except json.JSONDecodeError:
+            raise Exception(f"Non-JSON response ({resp.status_code}): {resp.text[:200]}")
+
+    def _post_form(self, url: str, data: dict) -> dict:
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        resp = self.client.post(url, data=data, headers=headers)
         if resp.status_code != 200:
             raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
         try:
@@ -186,9 +199,8 @@ class TwitterClient:
         return json.dumps(result, indent=2)
 
     def follow_user(self, user_id: str) -> str:
-        # Use REST API v1.1 for following
-        return json.dumps(self._get("https://api.twitter.com/1.1/friendships/create.json",
-                                     params={"user_id": user_id}), indent=2)
+        return json.dumps(self._post_form("https://x.com/i/api/1.1/friendships/create.json",
+                                          {"user_id": user_id}), indent=2)
 
     def close(self):
         self.client.close()
