@@ -24,9 +24,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --break-system-packages -r requirements.txt
+          pip install --break-system-packages coverage pytest-cov
 
-      - name: Run tests
-        run: python -m pytest test_twitter.py -v
+      - name: Run tests with coverage
+        run: |
+          python -m coverage run --source=auth,twitter_client,server,ai_news_daily -m pytest
+          python -m coverage report --fail-under=80
 
       - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
