@@ -11,6 +11,7 @@ MCP (Model Context Protocol) server to interact with Twitter/X directly from any
 - Look up user profiles
 - Follow/unfollow users
 - Authenticated user profile info
+- Daily AI news automation (`ai_news_daily.py`): fetches AI news from RSS feeds and posts via the MCP server on a cron schedule
 
 ## Quick Start
 
@@ -127,9 +128,20 @@ The server authenticates via `auth_token` and `ct0` session cookies, then makes 
 
 ## Tests
 
+The suite uses `pytest` with the HTTP layer fully mocked (no real Twitter calls). It covers the auth module, the GraphQL/REST client (success and error paths), the MCP server tools, and the daily AI news script.
+
 ```bash
-python -m pytest test_twitter.py -v
+python3 -m pytest -v
 ```
+
+Measure coverage across all source modules:
+
+```bash
+python3 -m coverage run --source=auth,twitter_client,server,ai_news_daily -m pytest
+python3 -m coverage report
+```
+
+Current coverage target: **≥ 80%** (currently ~88%).
 
 ## CI
 
@@ -141,7 +153,10 @@ On every push to `main`, GitHub Actions runs all tests and automatically creates
 ├── server.py           # MCP server entry point (12 tools via FastMCP)
 ├── twitter_client.py   # HTTP client for Twitter GraphQL API
 ├── auth.py             # Authentication via session cookies
-├── test_twitter.py     # Tests (16 tests, mocked API)
+├── ai_news_daily.py    # Cron script: posts daily AI news via the MCP server
+├── test_twitter.py     # Tests for auth + twitter_client (mocked API)
+├── test_server.py      # Tests for the MCP server tools
+├── test_ai_news.py     # Tests for the daily AI news script
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Cookie config template
 ├── .github/workflows/  # CI pipeline
