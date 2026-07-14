@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 *.tw_session
 *.session
+posted_news.json
