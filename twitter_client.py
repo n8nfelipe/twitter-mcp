@@ -132,13 +132,18 @@ class TwitterClient:
         except json.JSONDecodeError:
             raise Exception(f"Non-JSON response ({resp.status_code}): {resp.text[:200]}")
 
-    def post_tweet(self, text: str) -> str:
+    def post_tweet(self, text: str, reply_to: str = None) -> str:
         variables = {
             "tweet_text": text,
             "dark_request": False,
             "media": {"media_entities": [], "possibly_sensitive": False},
             "semantic_annotation_ids": [],
         }
+        if reply_to:
+            variables["reply"] = {
+                "in_reply_to_tweet_id": reply_to,
+                "exclude_reply_user_ids": [],
+            }
         result = self._graphql("CreateTweet", variables)
         return json.dumps(result, indent=2)
 

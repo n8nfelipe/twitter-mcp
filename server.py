@@ -16,13 +16,14 @@ mcp = FastMCP("twitter-mcp", instructions="Interact with Twitter/X: post tweets,
 
 
 @mcp.tool()
-def post_tweet(text: str) -> str:
+def post_tweet(text: str, reply_to: str = None) -> str:
     """Post a new tweet to Twitter/X.
 
     Args:
         text: The text content of the tweet
+        reply_to: Optional tweet ID to reply to (for threading)
     """
-    result = client.post_tweet(text)
+    result = client.post_tweet(text, reply_to=reply_to)
     return str(result)
 
 
