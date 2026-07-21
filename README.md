@@ -23,6 +23,22 @@ MCP (Model Context Protocol) server to interact with Twitter/X directly from any
 
 ### 2. Configure
 
+**Option A (recommended): Store cookies in secret-vault-mcp**
+
+If you have [`secret-vault-mcp`](https://github.com/n8nfelipe/secret-vault-mcp) installed and running:
+
+1. Populate the vault with a `twitter-cookies` entry:
+   ```
+   add_secret name=twitter-cookies username=n8nfelipe \
+     password=<auth_token> \
+     notes='{"ct0": "<ct0>", "user_id": "<user_id>", "csrf_token": "<csrf_token>"}'
+   ```
+2. Ensure `VAULT_MASTER_PASSWORD` env var is set (or in `opencode.jsonc` env block).
+3. Set `TWITTER_USE_VAULT=auto` (default) — the server will check the vault first,
+   then fall back to `.env`.
+
+**Option B: `.env` file**
+
 ```bash
 cp .env.example .env
 ```
@@ -39,6 +55,9 @@ TWITTER_CT0=seu_ct0_aqui
 ```bash
 pip install -r requirements.txt
 ```
+
+**Note**: `requirements.txt` includes `secret-vault-mcp` as an editable dependency.
+If you don't use the vault, you can remove the `-e ../secret-vault-mcp` line.
 
 ### 4. Run
 
@@ -59,13 +78,17 @@ Add to `~/.config/opencode/opencode.jsonc`:
       "command": "python3",
       "args": ["/path/to/twitter-mcp/server.py"],
       "env": {
-        "TWITTER_AUTH_TOKEN": "seu_token",
-        "TWITTER_CT0": "seu_ct0"
+        "VAULT_MASTER_PASSWORD": "your-passphrase",
+        "TWITTER_USE_VAULT": "auto"
       }
     }
   }
 }
 ```
+
+When `VAULT_MASTER_PASSWORD` is set, the server loads cookies from
+`secret-vault-mcp` automatically (entry name `twitter-cookies` by default).
+Override with `TWITTER_VAULT_ENTRY`.
 
 ## Register with Claude Desktop
 
